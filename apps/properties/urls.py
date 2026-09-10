@@ -7,6 +7,8 @@ from apps.properties.views import (
     UnitListView,
 )
 
+app_name = "properties"
+
 urlpatterns = [
     path("properties", PropertyListCreateView.as_view(), name="property-list"),
     path("properties/<int:property_id>", PropertyDetailView.as_view(), name="property-detail"),

@@ -23,6 +23,9 @@ INSTALLED_APPS = [
 
     "apps.common",
     "apps.users",
+    "apps.properties",
+    "apps.members",
+    "apps.contracts",
 ]
 
 MIDDLEWARE = [
