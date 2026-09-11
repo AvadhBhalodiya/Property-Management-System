@@ -1,66 +1,42 @@
 # Property Management API
 
-REST API for a property management system. Staff users register and log in with JWT, create properties
-containing units, register members (tenants), and assign a member to a unit under a contract. The system
-calculates the total contract value, blocks double-booking a unit for overlapping dates, and keeps unit
-status in sync with the contracts running against it.
+REST API for a property management system. Staff log in with JWT, create properties containing units,
+register members, and assign a member to a unit under a contract.
 
 Python 3.11, Django 5.2, Django REST Framework, PostgreSQL, Celery with Redis.
 
 ## Running it
 
-Docker is the quickest way. Nothing else needs to be installed.
-
 ```bash
 ./start.sh
 ```
 
-That copies `.env.example` to `.env` if you do not have one, builds the image, starts postgres, redis, the
-API, a celery worker and celery beat, applies migrations and seeds demo data. The API is then on
-http://localhost:8000 and you can log in with:
-
-```
-staff@example.com / Staff@123
-```
-
-Useful afterwards:
+Builds the image, starts postgres, redis, the API, a celery worker and celery beat, applies migrations and
+seeds demo data. The API is on http://localhost:8000, log in with `staff@example.com` / `Staff@123`.
 
 ```bash
 docker compose ps
 docker compose logs -f web
-docker compose logs -f celery_worker
-docker compose down          # stop
 docker compose down -v       # stop and drop the database
 ```
 
-### Running without Docker
+### Without Docker
 
-You need PostgreSQL and Redis on the host.
+Needs PostgreSQL and Redis on the host. Set `DB_HOST=localhost` and `REDIS_URL=redis://localhost:6379/0`
+in `.env`, then:
 
 ```bash
-python3 -m venv venv
-source venv/bin/activate
+python3 -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
-
-cp .env.example .env
-# set DB_HOST=localhost and REDIS_URL=redis://localhost:6379/0
 createdb property_management
-
-python manage.py migrate
-python manage.py seed_demo_data
-python manage.py runserver
-```
-
-Celery, in two more terminals:
-
-```bash
-celery -A config worker -l info
-celery -A config beat -l info
+python manage.py migrate && python manage.py seed_demo_data && python manage.py runserver
+celery -A config worker -l info        # separate terminal
+celery -A config beat -l info          # separate terminal
 ```
 
 ## Configuration
 
-Every value comes from `.env`. `.env.example` is the template.
+Every value comes from `.env`, and `.env.example` is the template.
 
 | Variable | Purpose |
 |---|---|
@@ -76,134 +52,57 @@ Every value comes from `.env`. `.env.example` is the template.
 
 ## Endpoints
 
-Every endpoint except register and login needs `Authorization: Bearer <access token>`.
+Everything except register and login needs `Authorization: Bearer <access token>`. Paths have no trailing
+slash. List endpoints are paginated 20 per page with `?page=`.
 
 | Method | Path | Notes |
 |---|---|---|
-| POST | `/api/auth/register` | creates a staff user, returns the user |
+| POST | `/api/auth/register` | creates a staff user |
 | POST | `/api/auth/login` | takes `email` and `password`, returns `access` and `refresh` |
-| POST | `/api/auth/refresh` | exchanges a refresh token for a new access token |
+| POST | `/api/auth/refresh` | new access token from a refresh token |
 | POST | `/api/properties` | create a property |
-| GET | `/api/properties` | list properties with `unit_count` |
+| GET | `/api/properties` | list with `unit_count` |
 | GET | `/api/properties/<property_id>` | property with its units nested |
-| POST | `/api/properties/<property_id>/units` | add a unit to a property |
-| GET | `/api/units` | list units, `?status=available` or `?status=occupied` |
+| POST | `/api/properties/<property_id>/units` | add a unit |
+| GET | `/api/units` | `?status=available` or `?status=occupied` |
 | POST | `/api/members` | create a member |
 | GET | `/api/members` | list members |
-| POST | `/api/contracts` | create a contract |
-| GET | `/api/contracts` | list contracts, `?active=true` or `?active=false` |
+| POST | `/api/contracts` | `monthly_rent` is optional, defaults to the unit's rent |
+| GET | `/api/contracts` | `?active=true` or `?active=false` |
 
-Paths have no trailing slash, matching the specification. List endpoints are paginated 20 per page with
-`?page=`.
+`postman_collection.json` covers all of them. Import it and run Login first; the token is stored in a
+collection variable the other requests use.
 
-`postman_collection.json` covers all of them. Import it, run **Login** first and the access token is stored
-in a collection variable that every other request uses.
-
-### Response format
-
-Successful responses:
+## Response format
 
 ```json
 {
   "success": true,
   "message": "Contract created successfully",
-  "data": { "id": 1, "total_value": "74516.13" }
+  "data": { "id": 1, "monthly_rent": "30000.00", "total_value": "74516.13" }
 }
 ```
-
-Failures:
 
 ```json
 {
   "success": false,
   "message": "Validation failed",
-  "errors": { "end_date": ["End date must be after start date."] }
+  "errors": { "unit": "This unit is already booked for the selected dates." }
 }
 ```
 
-List responses keep the DRF paginator inside `data`:
+List responses keep the paginator (`count`, `next`, `previous`, `results`) inside `data`.
 
-```json
-{
-  "success": true,
-  "message": "Contracts fetched successfully",
-  "data": {
-    "count": 12,
-    "next": "http://localhost:8000/api/contracts?page=2",
-    "previous": null,
-    "results": []
-  }
-}
-```
+## Business rules
 
-### Example
-
-```bash
-TOKEN=$(curl -s -X POST localhost:8000/api/auth/login \
-  -H 'Content-Type: application/json' \
-  -d '{"email":"staff@example.com","password":"Staff@123"}' \
-  | python3 -c 'import sys,json;print(json.load(sys.stdin)["data"]["access"])')
-
-curl -s -X POST localhost:8000/api/contracts \
-  -H "Authorization: Bearer $TOKEN" \
-  -H 'Content-Type: application/json' \
-  -d '{"unit":1,"member":1,"start_date":"2026-01-01","end_date":"2026-03-15","monthly_rent":"30000.00"}'
-```
-
-## Layout
-
-```
-config/           settings, root urls, api urls, celery app
-apps/common/      abstract timestamp model, response renderer, exception handler, seed command
-apps/users/       custom user model, registration, login
-apps/properties/  properties and units
-apps/members/     tenants
-apps/contracts/   contracts, contract rules, celery task
-```
-
-Each app keeps models, serializers, services, views and urls separate. Serializers validate the shape of a
-request, services hold the business rules and own the transaction, and views stay thin. A serializer's
-`create()` is a single call into a service.
-
-## How the main rules work
-
-**Total contract value** is calculated in `apps/contracts/services.py` and stored on the contract, so the
-figure agreed at signing does not move if the unit's rent changes later. Whole months are counted with
-`relativedelta(end_date + 1 day, start_date)` and any leftover days are prorated over the real number of
-days in that month. The extra day matters: a lease from 15 Jan 2026 to 14 Jan 2027 is twelve months, and
-without it the calculation returns eleven months and thirty days. At 30,000 a month:
-
-| Period | Total |
-|---|---|
-| 01 Jan to 31 Dec | 360000.00 |
-| 15 Jan 2026 to 14 Jan 2027 | 360000.00 |
-| 01 Jan to 15 Mar | 74516.13 |
-
-**Double-booking** is blocked by `has_overlapping_contract`, which treats both ends as inclusive
-(`start_date <= new end` and `end_date >= new start`), so a contract ending 30 June conflicts with one
-starting 30 June. The check runs inside `transaction.atomic()` after `select_for_update()` on the unit row,
-so two requests arriving at the same time for the same unit cannot both pass it.
-
-**Unit status** is a projection of contract state, not the source of truth. Creating a contract calls
-`refresh_unit_status`, which marks the unit occupied only if a contract is active *today*, so a lease signed
-now for next quarter does not make the unit disappear from `?status=available` for three months. A daily
-celery beat job runs `sync_unit_statuses` at 00:30 in `TIME_ZONE` to release units whose contracts have
-ended and occupy units whose contracts have just started. The same logic is available on demand:
-
-```bash
-docker compose exec web python manage.py sync_unit_statuses
-```
-
-**Active contracts** are derived from dates through `Contract.objects.active()` rather than a stored status
-column, which cannot drift. `?active=false` returns contracts that are not currently running, past or future.
-
-## Notes
-
-- Contracts reference units, members and users with `PROTECT`. A contract is a financial record and should
-  not disappear because something it points at was deleted.
-- `monthly_rent` may be omitted when creating a contract and falls back to the unit's rent.
-- Money is `Decimal` everywhere and DRF serializes it as a string, so `"32000.00"` rather than `32000.0`.
-- List endpoints run a constant number of queries regardless of page size, using `select_related` on
-  contracts and units and an annotated count on properties.
-- Registration is open because the specification describes staff registering themselves. In a real
-  deployment it would sit behind an invite or an admin-only endpoint.
+- **Total contract value** is calculated on create and stored, so the agreed figure does not move if the
+  unit's rent changes later. Whole months plus leftover days prorated over that month's real length. A
+  lease from 01 Jan to 15 Mar at 30,000 is 74516.13; a full year is exactly twelve times the rent, whether
+  or not it starts on the first.
+- **Double-booking** returns a 400. Both ends count as occupied, so a lease ending 30 June conflicts with
+  one starting 30 June. The check runs in a transaction with the unit row locked, so two simultaneous
+  requests cannot both succeed.
+- **Unit status** follows the contracts, and is set only while one is actually running — a lease signed
+  today for next quarter does not remove the unit from `?status=available` now. A celery beat job reconciles
+  it daily at 00:30; `python manage.py sync_unit_statuses` does the same on demand.
+- **Active contracts** are derived from the dates rather than a stored flag, so they cannot go stale.
