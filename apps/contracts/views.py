@@ -1,7 +1,11 @@
 from rest_framework import generics
+from rest_framework.exceptions import ValidationError
 
 from apps.contracts.models import Contract
 from apps.contracts.serializers import ContractCreateSerializer, ContractSerializer
+
+TRUE_VALUES = {"true", "1"}
+FALSE_VALUES = {"false", "0"}
 
 
 class ContractListCreateView(generics.ListCreateAPIView):
@@ -12,11 +16,20 @@ class ContractListCreateView(generics.ListCreateAPIView):
 
     def get_queryset(self):
         queryset = Contract.objects.with_related()
+        active = self.request.query_params.get("active")
 
-        if self.request.query_params.get("active"):
-            queryset = queryset.active()
+        if active is None:
+            return queryset
 
-        return queryset
+        value = active.lower()
+
+        if value in TRUE_VALUES:
+            return queryset.active()
+
+        if value in FALSE_VALUES:
+            return queryset.inactive()
+
+        raise ValidationError({"active": "Must be true or false."})
 
     def get_serializer_class(self):
         if self.request.method == "POST":

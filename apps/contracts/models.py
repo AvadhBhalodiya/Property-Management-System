@@ -12,6 +12,10 @@ class ContractQuerySet(models.QuerySet):
         on_date = on_date or timezone.localdate()
         return self.filter(start_date__lte=on_date, end_date__gte=on_date)
 
+    def inactive(self, on_date=None):
+        on_date = on_date or timezone.localdate()
+        return self.exclude(start_date__lte=on_date, end_date__gte=on_date)
+
     def with_related(self):
         return self.select_related("member", "unit", "unit__property")
 
