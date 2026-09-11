@@ -1,6 +1,8 @@
 from datetime import timedelta
 from pathlib import Path
 
+from celery.schedules import crontab
+
 from decouple import Csv, config
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -114,6 +116,12 @@ REST_FRAMEWORK = {
 
 CELERY_BROKER_URL = config("REDIS_URL")
 CELERY_TIMEZONE = TIME_ZONE
+CELERY_BEAT_SCHEDULE = {
+    "sync-unit-statuses": {
+        "task": "apps.contracts.tasks.sync_unit_statuses",
+        "schedule": crontab(hour=0, minute=30),
+    },
+}
 
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=config("ACCESS_TOKEN_LIFETIME_MINUTES", default=60, cast=int)),

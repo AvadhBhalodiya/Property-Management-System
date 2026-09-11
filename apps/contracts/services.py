@@ -4,6 +4,7 @@ from decimal import ROUND_HALF_UP, Decimal
 
 from dateutil.relativedelta import relativedelta
 from django.db import transaction
+from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 
 from apps.contracts.models import Contract
@@ -36,6 +37,22 @@ def refresh_unit_status(*, unit, on_date=None):
     is_occupied = Contract.objects.filter(unit=unit).active(on_date).exists()
     status = Unit.Status.OCCUPIED if is_occupied else Unit.Status.AVAILABLE
     set_unit_status(unit=unit, status=status)
+
+
+def sync_unit_statuses(on_date=None):
+    on_date = on_date or timezone.localdate()
+    active_unit_ids = Contract.objects.active(on_date).values("unit_id")
+
+    occupied = Unit.objects.filter(
+        status=Unit.Status.AVAILABLE,
+        id__in=active_unit_ids,
+    ).update(status=Unit.Status.OCCUPIED, updated_at=timezone.now())
+
+    released = Unit.objects.filter(
+        status=Unit.Status.OCCUPIED,
+    ).exclude(id__in=active_unit_ids).update(status=Unit.Status.AVAILABLE, updated_at=timezone.now())
+
+    return {"occupied": occupied, "released": released}
 
 
 @transaction.atomic
