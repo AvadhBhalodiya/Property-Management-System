@@ -30,7 +30,10 @@ class PropertySerializer(serializers.ModelSerializer):
         fields = ["id", "name", "address", "unit_count", "created_at"]
 
     def get_unit_count(self, obj):
-        return getattr(obj, "unit_count", obj.units.count())
+        if hasattr(obj, "unit_count"):
+            return obj.unit_count
+
+        return obj.units.count()
 
     def create(self, validated_data):
         return create_property(created_by=self.context["request"].user, **validated_data)

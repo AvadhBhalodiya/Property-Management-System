@@ -20,7 +20,7 @@ class PropertyListCreateView(generics.ListCreateAPIView):
     }
 
     def get_queryset(self):
-        return Property.objects.annotate(unit_count=Count("units"))
+        return Property.objects.annotate(unit_count=Count("units")).order_by("name")
 
 
 class PropertyDetailView(generics.RetrieveAPIView):

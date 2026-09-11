@@ -1,0 +1,390 @@
+{
+    "info": {
+        "name": "Property Management API",
+        "description": "Run Login first. It stores the access token in the collection variable used by every other request.",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "variable": [
+        {
+            "key": "base_url",
+            "value": "http://localhost:8000"
+        },
+        {
+            "key": "access_token",
+            "value": ""
+        }
+    ],
+    "auth": {
+        "type": "bearer",
+        "bearer": [
+            {
+                "key": "token",
+                "value": "{{access_token}}",
+                "type": "string"
+            }
+        ]
+    },
+    "item": [
+        {
+            "name": "Auth",
+            "item": [
+                {
+                    "name": "Register",
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"email\": \"new.staff@example.com\",\n    \"full_name\": \"New Staff\",\n    \"password\": \"Str0ngPass!23\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/auth/register",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "auth", "register"]
+                        }
+                    }
+                },
+                {
+                    "name": "Login",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "const body = pm.response.json();",
+                                    "if (body.success) {",
+                                    "    pm.collectionVariables.set('access_token', body.data.access);",
+                                    "    pm.collectionVariables.set('refresh_token', body.data.refresh);",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"email\": \"staff@example.com\",\n    \"password\": \"Staff@123\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/auth/login",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "auth", "login"]
+                        }
+                    }
+                },
+                {
+                    "name": "Refresh token",
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"refresh\": \"{{refresh_token}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/auth/refresh",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "auth", "refresh"]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Properties",
+            "item": [
+                {
+                    "name": "Create property",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"name\": \"Bandra Sea View\",\n    \"address\": \"22 Carter Road, Mumbai 400050\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/properties",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "properties"]
+                        }
+                    }
+                },
+                {
+                    "name": "List properties",
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{base_url}}/api/properties",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "properties"]
+                        }
+                    }
+                },
+                {
+                    "name": "Get property with units",
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{base_url}}/api/properties/1",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "properties", "1"]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Units",
+            "item": [
+                {
+                    "name": "Create unit under property",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"unit_number\": \"A-103\",\n    \"monthly_rent\": \"31000.00\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/properties/1/units",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "properties", "1", "units"]
+                        }
+                    }
+                },
+                {
+                    "name": "List units",
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{base_url}}/api/units",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "units"]
+                        }
+                    }
+                },
+                {
+                    "name": "List available units",
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{base_url}}/api/units?status=available",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "units"],
+                            "query": [
+                                {
+                                    "key": "status",
+                                    "value": "available"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "List occupied units",
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{base_url}}/api/units?status=occupied",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "units"],
+                            "query": [
+                                {
+                                    "key": "status",
+                                    "value": "occupied"
+                                }
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Members",
+            "item": [
+                {
+                    "name": "Create member",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"full_name\": \"Kiran Mehta\",\n    \"email\": \"kiran.mehta@example.com\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/members",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "members"]
+                        }
+                    }
+                },
+                {
+                    "name": "List members",
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{base_url}}/api/members",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "members"]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Contracts",
+            "item": [
+                {
+                    "name": "Create contract",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"unit\": 1,\n    \"member\": 1,\n    \"start_date\": \"2026-01-01\",\n    \"end_date\": \"2026-03-15\",\n    \"monthly_rent\": \"30000.00\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/contracts",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "contracts"]
+                        }
+                    }
+                },
+                {
+                    "name": "Create contract using unit rent",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"unit\": 2,\n    \"member\": 2,\n    \"start_date\": \"2026-04-01\",\n    \"end_date\": \"2027-03-31\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/contracts",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "contracts"]
+                        }
+                    }
+                },
+                {
+                    "name": "Create overlapping contract, expects 400",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"unit\": 1,\n    \"member\": 2,\n    \"start_date\": \"2026-02-01\",\n    \"end_date\": \"2026-06-30\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/contracts",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "contracts"]
+                        }
+                    }
+                },
+                {
+                    "name": "List contracts",
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{base_url}}/api/contracts",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "contracts"]
+                        }
+                    }
+                },
+                {
+                    "name": "List active contracts",
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{base_url}}/api/contracts?active=true",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "contracts"],
+                            "query": [
+                                {
+                                    "key": "active",
+                                    "value": "true"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "List contracts that are not active",
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{base_url}}/api/contracts?active=false",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "contracts"],
+                            "query": [
+                                {
+                                    "key": "active",
+                                    "value": "false"
+                                }
+                            ]
+                        }
+                    }
+                }
+            ]
+        }
+    ]
+}
