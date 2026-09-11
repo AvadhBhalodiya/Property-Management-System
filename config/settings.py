@@ -112,6 +112,9 @@ REST_FRAMEWORK = {
     "PAGE_SIZE": 20,
 }
 
+CELERY_BROKER_URL = config("REDIS_URL")
+CELERY_TIMEZONE = TIME_ZONE
+
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=config("ACCESS_TOKEN_LIFETIME_MINUTES", default=60, cast=int)),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=config("REFRESH_TOKEN_LIFETIME_DAYS", default=7, cast=int)),
